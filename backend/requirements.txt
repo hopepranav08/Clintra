@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+requests
+httpx
+langchain
+pinecone-client
+psycopg2-binary
+sqlalchemy
+python-dotenv
+pydantic
+pandas
