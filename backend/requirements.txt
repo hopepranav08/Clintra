@@ -1,11 +1,10 @@
 fastapi
-uvicorn[standard]
+uvicorn
+sqlalchemy
+psycopg2-binary
+python-dotenv
 requests
-httpx
 langchain
 pinecone-client
-psycopg2-binary
-sqlalchemy
-python-dotenv
-pydantic
-pandas
+cerebras-sdk
+llama-cpp-python
