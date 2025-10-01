@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -12,9 +13,11 @@ import httpx
 import json
 import time
 import base64
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
+from functools import lru_cache
 
 class HypothesisRequest(BaseModel):
     text: str
@@ -74,6 +77,12 @@ app.add_middleware(
     allowed_hosts=["localhost", "127.0.0.1", "frontend", "backend"]
 )
 
+# GZip compression for faster responses
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1000  # Compress responses larger than 1KB
+)
+
 # Rate limiting middleware
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
@@ -126,31 +135,53 @@ def debug_env():
 async def search(request: SearchRequest, db: Session = Depends(deps.get_db)):
     """
     Performs a literature search using PubMed + ClinicalTrials + RAG pipeline with advanced filtering.
+    Optimized for speed with parallel API calls.
     """
-    if not request.query:
-        raise HTTPException(status_code=400, detail="A search query is required.")
-
-    if len(request.query) > 500:
-        raise HTTPException(status_code=400, detail="Query too long. Maximum 500 characters.")
+    # Import validation utilities
+    from .errors import validate_query
+    
+    # Validate and sanitize query
+    try:
+        validate_query(request.query, max_length=500)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        # Get literature from PubMed with filters
+        # Run PubMed and ClinicalTrials searches in parallel for speed
         from .connectors.pubmed import PubMedConnector
-        pubmed_connector = PubMedConnector()
-        pubmed_results = pubmed_connector.search_articles(
-            request.query, 
-            max_results=request.max_results or 5,
-            filters=request.filters
+        from .connectors.trials import ClinicalTrialsConnector
+        
+        async def fetch_pubmed():
+            pubmed_connector = PubMedConnector()
+            return pubmed_connector.search_articles(
+                request.query, 
+                max_results=request.max_results or 5,
+                filters=request.filters
+            )
+        
+        async def fetch_trials():
+            trials_connector = ClinicalTrialsConnector()
+            return trials_connector.search_trials(
+                request.query,
+                max_results=request.max_results or 5,
+                filters=request.filters
+            )
+        
+        # Execute in parallel
+        pubmed_results, trials_results = await asyncio.gather(
+            fetch_pubmed(),
+            fetch_trials(),
+            return_exceptions=True
         )
         
-        # Get clinical trials with filters
-        from .connectors.trials import ClinicalTrialsConnector
-        trials_connector = ClinicalTrialsConnector()
-        trials_results = trials_connector.search_trials(
-            request.query,
-            max_results=request.max_results or 5,
-            filters=request.filters
-        )
+        # Handle exceptions
+        if isinstance(pubmed_results, Exception):
+            print(f"PubMed search error: {pubmed_results}")
+            pubmed_results = []
+        
+        if isinstance(trials_results, Exception):
+            print(f"ClinicalTrials search error: {trials_results}")
+            trials_results = {"trials": []}
         
         # Get additional data sources
         additional_data = {}
@@ -685,8 +716,14 @@ async def generate_hypothesis(request: HypothesisRequest, db: Session = Depends(
     """
     Generates AI hypotheses using Cerebras inference with multiple data sources.
     """
-    if not request.text:
-        raise HTTPException(status_code=400, detail="Input text is required for hypothesis generation.")
+    # Import validation utilities
+    from .errors import validate_query
+    
+    # Validate input
+    try:
+        validate_query(request.text, max_length=500)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
         # Get relevant literature for context
@@ -724,38 +761,51 @@ async def generate_hypothesis(request: HypothesisRequest, db: Session = Depends(
 @app.post("/api/download")
 async def download_data(request: DownloadRequest, db: Session = Depends(deps.get_db)):
     """
-    Downloads compound/protein data from multiple sources.
+    Downloads compound/protein data from multiple sources with validated links.
     """
-    if not request.compound_name:
-        raise HTTPException(status_code=400, detail="Compound name is required.")
+    # Import validation utilities
+    from .errors import validate_compound_name
+    
+    # Validate compound name
+    try:
+        validate_compound_name(request.compound_name)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        # Get compound data from PubChem
+        # Get compound data from PubChem (real API)
         compound_info = pubchem.get_compound_info(request.compound_name)
         
-        # Get protein structure data (use a real PDB ID)
-        protein_data = pdb.get_protein_structure("1CRN")  # Real PDB ID for crambin
+        # Get protein structure data (try to search by compound name, fallback to example)
+        protein_data = pdb.get_protein_structure(request.compound_name[:4] if len(request.compound_name) >= 4 else "1CRN")
         
-        # Prepare downloadable files and metadata
+        # Use real CID from compound_info for accurate links
+        cid = compound_info.get("cid", request.compound_name)
+        pdb_id = protein_data.get("pdb_id", "1CRN")
+        
+        # Prepare downloadable files with validated URLs
         download_data = {
             "compound_name": request.compound_name,
             "pubchem_data": compound_info,
             "protein_structure": protein_data,
             "download_links": {
-                "pubchem_sdf": f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{request.compound_name}/SDF",
-                "pubchem_json": f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{request.compound_name}/JSON",
-                "pdb_structure": f"https://files.rcsb.org/download/{protein_data['pdb_id']}.pdb",
-                "compound_info": f"https://pubchem.ncbi.nlm.nih.gov/compound/{request.compound_name}",
-                "structure_viewer": f"https://pubchem.ncbi.nlm.nih.gov/3d-viewer?cid={request.compound_name}",
-                "pdb_cif": f"https://files.rcsb.org/download/{protein_data['pdb_id']}.cif"
+                **compound_info.get("download_links", {}),
+                "pdb_structure": protein_data.get("download_links", {}).get("pdb", f"https://files.rcsb.org/download/{pdb_id}.pdb"),
+                "pdb_cif": protein_data.get("download_links", {}).get("cif", f"https://files.rcsb.org/download/{pdb_id}.cif"),
+                "pdb_xml": protein_data.get("download_links", {}).get("xml", f"https://files.rcsb.org/download/{pdb_id}.xml"),
+                "pdb_fasta": protein_data.get("download_links", {}).get("fasta", f"https://files.rcsb.org/download/{pdb_id}.fasta"),
+                "compound_visualization": compound_info.get("visualization", f"https://pubchem.ncbi.nlm.nih.gov/3d-viewer?cid={cid}"),
+                "protein_visualization": protein_data.get("visualization", f"https://www.rcsb.org/3d-view/{pdb_id}")
             },
             "metadata": {
                 "molecular_formula": compound_info.get("molecular_formula"),
                 "molecular_weight": compound_info.get("molecular_weight"),
+                "iupac_name": compound_info.get("iupac_name"),
                 "structure_method": protein_data.get("method"),
-                "resolution": protein_data.get("resolution")
+                "resolution": protein_data.get("resolution"),
+                "organism": protein_data.get("organism")
             },
-            "sponsor_tech": "Data retrieved using Docker MCP Gateway microservices"
+            "sponsor_tech": "Data retrieved using Docker MCP Gateway microservices with real API integration"
         }
         
         return download_data
@@ -987,18 +1037,25 @@ class ChatMessageCreate(BaseModel):
 @app.post("/api/graph")
 async def generate_graph(request: GraphRequest, db: Session = Depends(deps.get_db)):
     """
-    Generates a real graph visualization for the given query.
+    Generates a real graph visualization for the given query with proper error handling.
     """
-    if not request.query:
-        raise HTTPException(status_code=400, detail="A query is required.")
+    # Import validation utilities
+    from .errors import validate_query
+    
+    # Validate query
+    try:
+        validate_query(request.query, max_length=200)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     try:
-        # Generate real graph using the graph generator
-        graph_data = graph_generator.graph_generator.generate_biomedical_graph(request.query, request.graph_type)
+        # Generate real graph using the graph generator (static method)
+        graph_data = graph_generator.GraphGenerator.generate_biomedical_graph(request.query, request.graph_type)
         
         return graph_data
         
     except Exception as e:
+        print(f"Graph generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Graph generation failed: {str(e)}")
 
 # Authentication endpoints

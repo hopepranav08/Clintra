@@ -319,10 +319,43 @@ function App() {
         });
     };
 
-    // Function to render message content with clickable links
+    // Function to format and enhance content
+    const formatContent = (content) => {
+        // Make URLs clickable
+        let formatted = linkifyText(content);
+        
+        // Format TL;DR section with special styling
+        formatted = formatted.replace(
+            /\*\*TL;DR:\*\*\s*(.*?)(\n|$)/gi,
+            '<div class="tldr-section mt-6 mb-4 p-4 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg border-l-4 border-blue-400 shadow-lg">' +
+            '<strong class="text-white font-bold text-base block mb-2">📌 TL;DR (Too Long; Didn\'t Read)</strong>' +
+            '<p class="text-white text-sm leading-relaxed">$1</p>' +
+            '</div>'
+        );
+        
+        // Format headings
+        formatted = formatted.replace(/\*\*(.*?):\*\*/g, '<strong class="text-blue-300 font-semibold">$1:</strong>');
+        
+        // Format bullet points
+        formatted = formatted.replace(/^[•\-]\s+(.+)$/gm, '<li class="ml-4 mb-1">$1</li>');
+        
+        // Wrap consecutive list items in ul
+        formatted = formatted.replace(/(<li.*?<\/li>\s*)+/g, '<ul class="list-disc ml-6 my-2">$&</ul>');
+        
+        // Format numbered lists
+        formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div class="ml-4 mb-2"><span class="text-blue-400 font-semibold">$1.</span> $2</div>');
+        
+        // Add proper paragraph spacing
+        formatted = formatted.replace(/\n\n/g, '</p><p class="mt-3 mb-3">');
+        formatted = '<p class="mt-3 mb-3">' + formatted + '</p>';
+        
+        return formatted;
+    };
+
+    // Function to render message content with enhanced formatting
     const renderMessageContent = (content) => {
-        const linkifiedContent = linkifyText(content);
-        return <div dangerouslySetInnerHTML={{ __html: linkifiedContent }} />;
+        const formattedContent = formatContent(content);
+        return <div className="message-content" dangerouslySetInnerHTML={{ __html: formattedContent }} />;
     };
 
     // Show login screen if user is not authenticated

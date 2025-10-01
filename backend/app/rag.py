@@ -6,11 +6,98 @@ import os
 import httpx
 import json
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from langchain_community.vectorstores import Pinecone
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.llms import LlamaCpp
 from langchain.chains import RetrievalQA
+from difflib import SequenceMatcher
+
+def _is_casual_conversation(query: str) -> Tuple[bool, str]:
+    """
+    Detect if the query is casual conversation and return appropriate response.
+    """
+    query_lower = query.lower().strip()
+    
+    # Greetings
+    greetings = {
+        'hi': 'Hello! I\'m Clintra, your biomedical research assistant. How can I help you today?',
+        'hello': 'Hi there! I\'m Clintra, ready to assist you with biomedical research. What would you like to know?',
+        'hey': 'Hey! I\'m here to help with your biomedical research queries. What can I do for you?',
+        'good morning': 'Good morning! Ready to dive into some biomedical research?',
+        'good afternoon': 'Good afternoon! How can I assist with your research today?',
+        'good evening': 'Good evening! What biomedical questions can I help you with?',
+        'whats up': 'I\'m here and ready to help with biomedical research! What would you like to explore?',
+        'what\'s up': 'I\'m here and ready to help with biomedical research! What would you like to explore?',
+        'how are you': 'I\'m functioning perfectly and ready to assist with your biomedical research! What can I help you with?',
+        'howdy': 'Howdy! Let\'s explore some biomedical research together. What interests you?'
+    }
+    
+    for greeting, response in greetings.items():
+        if query_lower == greeting or query_lower.startswith(greeting + ' ') or query_lower.startswith(greeting + '!'):
+            return True, response
+    
+    # General questions
+    if any(phrase in query_lower for phrase in ['what can you do', 'what do you do', 'help me', 'what are you']):
+        return True, """I'm Clintra, your AI-powered biomedical research assistant! Here's what I can help you with:
+
+**Literature Search** 📚
+Search PubMed and ClinicalTrials.gov for the latest biomedical research
+
+**Hypothesis Generation** 💡
+Generate AI-powered research hypotheses with supporting evidence
+
+**Data Download** 📥
+Download compound structures and protein data from PubChem and PDB
+
+**Graph Visualization** 🔬
+Create interactive network graphs showing relationships between biomedical entities
+
+Just ask me about any biomedical topic and I'll help you explore it!"""
+    
+    # Thanks
+    if any(phrase in query_lower for phrase in ['thank', 'thanks', 'appreciate']):
+        return True, 'You\'re welcome! Feel free to ask if you need anything else!'
+    
+    # Bye
+    if any(phrase in query_lower for phrase in ['bye', 'goodbye', 'see you', 'later']):
+        return True, 'Goodbye! Come back anytime you need biomedical research assistance!'
+    
+    return False, ""
+
+def _correct_spelling(query: str) -> str:
+    """
+    Simple spell correction for common biomedical terms.
+    """
+    corrections = {
+        'cancr': 'cancer',
+        'diabtes': 'diabetes',
+        'diabetis': 'diabetes',
+        'alzheimer': 'alzheimers',
+        'protien': 'protein',
+        'protiens': 'proteins',
+        'molecul': 'molecule',
+        'gentic': 'genetic',
+        'celular': 'cellular',
+        'thearpy': 'therapy',
+        'treatmnet': 'treatment',
+        'diseaes': 'disease',
+        'medecine': 'medicine',
+        'medcine': 'medicine',
+        'reserch': 'research',
+        'studdy': 'study',
+        'clincal': 'clinical',
+        'biomedcal': 'biomedical',
+        'pharma': 'pharmaceutical'
+    }
+    
+    corrected = query
+    for wrong, right in corrections.items():
+        # Case-insensitive replacement
+        pattern = re.compile(re.escape(wrong), re.IGNORECASE)
+        corrected = pattern.sub(right, corrected)
+    
+    return corrected
 
 async def call_cerebras_api(prompt: str, max_tokens: int = 500, model: str = "llama3.1-8b", temperature: float = 0.7) -> str:
     """
@@ -175,14 +262,30 @@ def get_rag_pipeline(pinecone_index_name: str):
 
     # Enhanced mock function that simulates the full pipeline
     async def enhanced_qa_chain(query: str, context_docs: List[Dict] = None, model: str = "llama3.1-8b", temperature: float = 0.7):
+        # Check for casual conversation first
+        is_casual, casual_response = _is_casual_conversation(query)
+        if is_casual:
+            return {
+                "query": query,
+                "result": casual_response,
+                "retrieved_docs": 0,
+                "model_used": "conversation",
+                "temperature": 0.0,
+                "sponsor_tech": "Powered by Clintra conversational AI"
+            }
+        
+        # Apply spell correction to the query
+        corrected_query = _correct_spelling(query)
+        display_query = corrected_query if corrected_query != query else query
+        
         # Use provided context or simulate retrieval from vector store
         if context_docs:
             retrieved_docs = context_docs
         else:
             retrieved_docs = [
-                {"content": f"Document 1: Research on {query} shows promising results in clinical trials."},
-                {"content": f"Document 2: Clinical trials for {query} are ongoing with positive outcomes."},
-                {"content": f"Document 3: Molecular mechanisms of {query} are being studied extensively."}
+                {"content": f"Document 1: Research on {corrected_query} shows promising results in clinical trials."},
+                {"content": f"Document 2: Clinical trials for {corrected_query} are ongoing with positive outcomes."},
+                {"content": f"Document 3: Molecular mechanisms of {corrected_query} are being studied extensively."}
             ]
         
         # Create enhanced context for Cerebras
@@ -191,7 +294,7 @@ def get_rag_pipeline(pinecone_index_name: str):
         # Enhanced prompt with better structure
         prompt = f"""You are a biomedical research assistant. Based on the following research context, provide a comprehensive, evidence-based answer to the query.
 
-Query: {query}
+Query: {corrected_query}
 
 Research Context:
 {context}
@@ -205,7 +308,7 @@ Please provide a detailed response that includes:
 
 Format your response in clear, professional language suitable for researchers and clinicians.
 
-CRITICAL: You MUST end your response with a "TL;DR" section that provides a concise 2-3 sentence summary of the key points. This is mandatory.
+CRITICAL: You MUST end your response with a "**TL;DR:**" section (in bold) that provides a concise 2-3 sentence summary of the key points. This is mandatory and must be clearly visible.
 
 Answer:"""
 
@@ -219,9 +322,12 @@ Answer:"""
         else:
             answer = _clean_cerebras_response(raw_answer)
         
+        # Add spell correction notice if needed
+        spell_notice = f"\n\n*Note: Auto-corrected '{query}' to '{corrected_query}'*" if corrected_query != query else ""
+        
         return {
-            "query": query,
-            "result": answer,
+            "query": display_query,
+            "result": answer + spell_notice,
             "retrieved_docs": len(retrieved_docs),
             "model_used": model,
             "temperature": temperature,

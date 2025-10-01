@@ -17,12 +17,14 @@ class GraphGenerator:
     def __init__(self):
         self.temp_dir = tempfile.mkdtemp()
         
-    def generate_biomedical_graph(self, query: str, data_type: str = "literature") -> Dict[str, Any]:
+    @staticmethod
+    def generate_biomedical_graph(query: str, graph_type: str = "network") -> Dict[str, Any]:
         """
-        Generate a real biomedical graph based on the query.
+        Generate a real biomedical graph based on the query with proper error handling.
         """
-        # Create a network graph
-        G = nx.Graph()
+        try:
+            # Create a network graph
+            G = nx.Graph()
         
         # Add nodes based on query
         main_node = query.replace(' ', '_').lower()
@@ -65,58 +67,88 @@ class GraphGenerator:
             G.add_edge("molecule", "receptor", type="binds")
             G.add_edge("receptor", "pathway", type="activates")
         
-        # Generate different formats
-        graph_data = {
-            "query": query,
-            "graph_type": "network",
-            "nodes": [{"id": node, "label": G.nodes[node].get("label", node), 
-                      "type": G.nodes[node].get("type", "unknown"), 
-                      "size": G.nodes[node].get("size", 10)} for node in G.nodes()],
-            "edges": [{"source": edge[0], "target": edge[1], 
-                      "type": G.edges[edge].get("type", "connects")} for edge in G.edges()],
-            "download_links": self._generate_download_links(G, query),
-            "sponsor_tech": "Powered by NetworkX, Matplotlib, and Plotly for real graph generation"
-        }
-        
-        return graph_data
+            # Generate different formats
+            graph_data = {
+                "query": query,
+                "graph_type": graph_type,
+                "nodes": [{"id": node, "label": G.nodes[node].get("label", node), 
+                          "type": G.nodes[node].get("type", "unknown"), 
+                          "size": G.nodes[node].get("size", 10)} for node in G.nodes()],
+                "edges": [{"source": edge[0], "target": edge[1], 
+                          "type": G.edges[edge].get("type", "connects")} for edge in G.edges()],
+                "download_links": GraphGenerator._generate_download_links(G, query),
+                "sponsor_tech": "Powered by NetworkX, Matplotlib, and Plotly for real graph generation"
+            }
+            
+            return graph_data
+            
+        except Exception as e:
+            print(f"Error generating graph: {e}")
+            # Return a minimal fallback graph
+            return {
+                "query": query,
+                "graph_type": graph_type,
+                "nodes": [{"id": "main", "label": query, "type": "main", "size": 20}],
+                "edges": [],
+                "download_links": {
+                    "graph_json": "data:application/json;base64,e30=",  # Empty JSON: {}
+                    "graph_png": "data:image/png;base64,",
+                    "graph_svg": "data:image/svg+xml;base64,",
+                    "interactive_viewer": "data:text/html;base64,"
+                },
+                "sponsor_tech": "Graph generation encountered an error",
+                "error": str(e)
+            }
     
-    def _generate_download_links(self, G: nx.Graph, query: str) -> Dict[str, str]:
+    @staticmethod
+    def _generate_download_links(G: nx.Graph, query: str) -> Dict[str, str]:
         """
-        Generate real downloadable graph files.
+        Generate real downloadable graph files with proper error handling.
         """
-        # Generate JSON data
-        graph_json = {
-            "nodes": [{"id": node, "label": G.nodes[node].get("label", node), 
-                      "type": G.nodes[node].get("type", "unknown"), 
-                      "size": G.nodes[node].get("size", 10)} for node in G.nodes()],
-            "edges": [{"source": edge[0], "target": edge[1], 
-                      "type": G.edges[edge].get("type", "connects")} for edge in G.edges()],
-            "metadata": {"query": query, "generated_at": "2024-01-01T00:00:00Z"}
-        }
-        
-        json_data = json.dumps(graph_json, indent=2)
-        json_b64 = base64.b64encode(json_data.encode()).decode()
-        
-        # Generate PNG image
-        png_b64 = self._generate_png_graph(G, query)
-        
-        # Generate SVG
-        svg_b64 = self._generate_svg_graph(G, query)
-        
-        # Generate interactive HTML
-        html_b64 = self._generate_interactive_html(G, query)
-        
-        return {
-            "graph_json": f"data:application/json;base64,{json_b64}",
-            "graph_png": f"data:image/png;base64,{png_b64}",
-            "graph_svg": f"data:image/svg+xml;base64,{svg_b64}",
-            "interactive_viewer": f"data:text/html;base64,{html_b64}"
-        }
+        try:
+            # Generate JSON data
+            graph_json = {
+                "nodes": [{"id": node, "label": G.nodes[node].get("label", node), 
+                          "type": G.nodes[node].get("type", "unknown"), 
+                          "size": G.nodes[node].get("size", 10)} for node in G.nodes()],
+                "edges": [{"source": edge[0], "target": edge[1], 
+                          "type": G.edges[edge].get("type", "connects")} for edge in G.edges()],
+                "metadata": {"query": query, "generated_at": "2024-01-01T00:00:00Z"}
+            }
+            
+            json_data = json.dumps(graph_json, indent=2)
+            json_b64 = base64.b64encode(json_data.encode()).decode()
+            
+            # Generate PNG image
+            png_b64 = GraphGenerator._generate_png_graph(G, query)
+            
+            # Generate SVG
+            svg_b64 = GraphGenerator._generate_svg_graph(G, query)
+            
+            # Generate interactive HTML
+            html_b64 = GraphGenerator._generate_interactive_html(G, query)
+            
+            return {
+                "graph_json": f"data:application/json;base64,{json_b64}",
+                "graph_png": f"data:image/png;base64,{png_b64}",
+                "graph_svg": f"data:image/svg+xml;base64,{svg_b64}",
+                "interactive_viewer": f"data:text/html;base64,{html_b64}"
+            }
+        except Exception as e:
+            print(f"Error generating download links: {e}")
+            return {
+                "graph_json": "data:application/json;base64,e30=",
+                "graph_png": "data:image/png;base64,",
+                "graph_svg": "data:image/svg+xml;base64,",
+                "interactive_viewer": "data:text/html;base64,"
+            }
     
-    def _generate_png_graph(self, G: nx.Graph, query: str) -> str:
+    @staticmethod
+    def _generate_png_graph(G: nx.Graph, query: str) -> str:
         """
-        Generate a PNG image of the graph.
+        Generate a PNG image of the graph with error handling.
         """
+        try:
         plt.figure(figsize=(12, 8))
         plt.style.use('dark_background')
         
@@ -165,13 +197,19 @@ class GraphGenerator:
         png_b64 = base64.b64encode(buffer.getvalue()).decode()
         plt.close()
         
-        return png_b64
+            return png_b64
+        except Exception as e:
+            print(f"Error generating PNG: {e}")
+            # Return empty base64 on error
+            return ""
     
-    def _generate_svg_graph(self, G: nx.Graph, query: str) -> str:
+    @staticmethod
+    def _generate_svg_graph(G: nx.Graph, query: str) -> str:
         """
-        Generate an SVG image of the graph.
+        Generate an SVG image of the graph with error handling.
         """
-        plt.figure(figsize=(12, 8))
+        try:
+            plt.figure(figsize=(12, 8))
         plt.style.use('dark_background')
         
         pos = nx.spring_layout(G, k=3, iterations=50)
@@ -218,14 +256,19 @@ class GraphGenerator:
         svg_b64 = base64.b64encode(buffer.getvalue()).decode()
         plt.close()
         
-        return svg_b64
+            return svg_b64
+        except Exception as e:
+            print(f"Error generating SVG: {e}")
+            return ""
     
-    def _generate_interactive_html(self, G: nx.Graph, query: str) -> str:
+    @staticmethod
+    def _generate_interactive_html(G: nx.Graph, query: str) -> str:
         """
-        Generate an interactive HTML visualization using Plotly.
+        Generate an interactive HTML visualization using Plotly with error handling.
         """
-        # Get positions
-        pos = nx.spring_layout(G, k=3, iterations=50)
+        try:
+            # Get positions
+            pos = nx.spring_layout(G, k=3, iterations=50)
         
         # Prepare data for Plotly
         edge_x = []
@@ -300,11 +343,14 @@ class GraphGenerator:
                            font=dict(color='white')
                        ))
         
-        # Convert to HTML
-        html_str = fig.to_html(include_plotlyjs='cdn', div_id="graph")
-        html_b64 = base64.b64encode(html_str.encode()).decode()
-        
-        return html_b64
+            # Convert to HTML
+            html_str = fig.to_html(include_plotlyjs='cdn', div_id="graph")
+            html_b64 = base64.b64encode(html_str.encode()).decode()
+            
+            return html_b64
+        except Exception as e:
+            print(f"Error generating interactive HTML: {e}")
+            return ""
 
 # Global instance
 graph_generator = GraphGenerator()
