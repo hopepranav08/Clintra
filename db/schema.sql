@@ -67,37 +67,6 @@ CREATE TABLE chat_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for better query performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_created_at ON users(created_at);
-
-CREATE INDEX idx_chat_sessions_user_id ON chat_sessions(user_id);
-CREATE INDEX idx_chat_sessions_created_at ON chat_sessions(created_at);
-CREATE INDEX idx_chat_sessions_is_active ON chat_sessions(is_active);
-
-CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
-CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
-CREATE INDEX idx_chat_messages_role ON chat_messages(role);
-
-CREATE INDEX idx_activities_user_id ON activities(user_id);
-CREATE INDEX idx_activities_created_at ON activities(created_at);
-CREATE INDEX idx_activities_activity_type ON activities(activity_type);
-
-CREATE INDEX idx_workspaces_created_by ON workspaces(created_by);
-CREATE INDEX idx_workspaces_is_active ON workspaces(is_active);
-
-CREATE INDEX idx_workspace_members_workspace_id ON workspace_members(workspace_id);
-CREATE INDEX idx_workspace_members_user_id ON workspace_members(user_id);
-
-CREATE INDEX idx_shared_searches_workspace_id ON shared_searches(workspace_id);
-CREATE INDEX idx_shared_searches_shared_by ON shared_searches(shared_by);
-CREATE INDEX idx_shared_searches_created_at ON shared_searches(created_at);
-
-CREATE INDEX idx_comments_shared_search_id ON comments(shared_search_id);
-CREATE INDEX idx_comments_user_id ON comments(user_id);
-CREATE INDEX idx_comments_created_at ON comments(created_at);
-
 -- Create workspaces table
 CREATE TABLE workspaces (
     id SERIAL PRIMARY KEY,
@@ -139,3 +108,34 @@ CREATE TABLE comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create indexes for better query performance (after all tables are created)
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+CREATE INDEX idx_chat_sessions_user_id ON chat_sessions(user_id);
+CREATE INDEX idx_chat_sessions_created_at ON chat_sessions(created_at);
+CREATE INDEX idx_chat_sessions_is_active ON chat_sessions(is_active);
+
+CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX idx_chat_messages_role ON chat_messages(role);
+
+CREATE INDEX idx_activities_user_id ON activities(user_id);
+CREATE INDEX idx_activities_created_at ON activities(created_at);
+CREATE INDEX idx_activities_activity_type ON activities(activity_type);
+
+CREATE INDEX idx_workspaces_created_by ON workspaces(created_by);
+CREATE INDEX idx_workspaces_is_active ON workspaces(is_active);
+
+CREATE INDEX idx_workspace_members_workspace_id ON workspace_members(workspace_id);
+CREATE INDEX idx_workspace_members_user_id ON workspace_members(user_id);
+
+CREATE INDEX idx_shared_searches_workspace_id ON shared_searches(workspace_id);
+CREATE INDEX idx_shared_searches_shared_by ON shared_searches(shared_by);
+CREATE INDEX idx_shared_searches_created_at ON shared_searches(created_at);
+
+CREATE INDEX idx_comments_shared_search_id ON comments(shared_search_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX idx_comments_created_at ON comments(created_at);

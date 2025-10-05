@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import requests
+import json
 from typing import List, Dict, Any, Optional
 try:
     import pinecone
@@ -28,24 +30,61 @@ class VectorDatabase:
     def __init__(self):
         self.pinecone_api_key = os.getenv('PINECONE_API_KEY')
         self.pinecone_environment = os.getenv('PINECONE_ENVIRONMENT', 'gcp-starter')
+        self.pinecone_project_id = os.getenv('PINECONE_PROJECT_ID')
+        self.pinecone_host = os.getenv('PINECONE_HOST')
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        self.index_name = "clintra-biomedical"
-        self.dimension = 1536  # OpenAI embedding dimension
+        self.index_name = "clintra-index"
+        self.dimension = 1536  # OpenAI embedding dimension - matches your updated Pinecone index
         self.pinecone_available = pinecone is not None
         self.metric = "cosine"
         
-        # Initialize Pinecone
-        if self.pinecone_api_key and self.pinecone_available:
-            pinecone.init(api_key=self.pinecone_api_key, environment=self.pinecone_environment)
-            self.pc = pinecone
-            self._initialize_index()
+        # Initialize Pinecone - Manual HTTP approach
+        if self.pinecone_api_key and self.pinecone_host:
+            try:
+                logger.info(f"Initializing Pinecone with manual HTTP connection to: {self.pinecone_host}")
+                # Test connection with a simple stats request
+                headers = {
+                    "Api-Key": self.pinecone_api_key,
+                    "Content-Type": "application/json"
+                }
+                stats_url = f"{self.pinecone_host}/describe_index_stats"
+                response = requests.post(stats_url, headers=headers, json={}, timeout=10)
+                
+                if response.status_code == 200:
+                    logger.info("Manual Pinecone connection successful!")
+                    self.pc = "manual"  # Flag to indicate manual mode
+                    self.pinecone_headers = headers
+                    self.pinecone_base_url = self.pinecone_host
+                else:
+                    logger.warning(f"Manual Pinecone connection failed with status {response.status_code}: {response.text}")
+                    self.pc = None
+                    
+            except Exception as e:
+                logger.warning(f"Manual Pinecone connection failed: {e}. Trying fallback...")
+                # Fallback to original client
+                try:
+                    if self.pinecone_available:
+                        pinecone.init(api_key=self.pinecone_api_key, environment=self.pinecone_environment)
+                        self.pc = pinecone
+                        self._initialize_index()
+                        logger.info("Fallback Pinecone initialization successful")
+                    else:
+                        self.pc = None
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback Pinecone initialization also failed: {fallback_error}. Vector search will be disabled.")
+                    self.pc = None
         else:
-            logger.warning("Pinecone API key not found. Vector search will be disabled.")
+            logger.warning("Pinecone API key or host not found. Vector search will be disabled.")
             self.pc = None
         
-        # Initialize embeddings
+        # Initialize embeddings - now dimensions match perfectly!
         if self.openai_api_key and OpenAIEmbeddings is not None:
-            self.embeddings = OpenAIEmbeddings(openai_api_key=self.openai_api_key)
+            try:
+                self.embeddings = OpenAIEmbeddings(openai_api_key=self.openai_api_key)
+                logger.info(f"OpenAI embeddings initialized successfully with {self.dimension} dimensions")
+            except Exception as e:
+                logger.warning(f"OpenAI embeddings initialization failed: {e}. Using mock embeddings.")
+                self.embeddings = None
         else:
             logger.warning("OpenAI API key not found or OpenAI not available. Using mock embeddings.")
             self.embeddings = None
@@ -66,6 +105,57 @@ class VectorDatabase:
             logger.error(f"Failed to initialize Pinecone index: {e}")
             self.index = None
     
+    def _manual_upsert_vectors(self, vectors: List[Dict]) -> bool:
+        """Manual vector upsert using direct HTTP requests"""
+        try:
+            upsert_url = f"{self.pinecone_base_url}/vectors/upsert"
+            payload = {
+                "vectors": vectors,
+                "namespace": ""
+            }
+            response = requests.post(upsert_url, headers=self.pinecone_headers, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully upserted {len(vectors)} vectors")
+                return True
+            else:
+                logger.error(f"Manual upsert failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Manual upsert error: {e}")
+            return False
+    
+    def _manual_query_vectors(self, vector: List[float], top_k: int = 5, filter_dict: Optional[Dict] = None) -> List[Dict]:
+        """Manual vector query using direct HTTP requests"""
+        try:
+            query_url = f"{self.pinecone_base_url}/query"
+            payload = {
+                "vector": vector,
+                "topK": top_k,
+                "includeMetadata": True,
+                "includeValues": False,
+                "namespace": ""
+            }
+            
+            if filter_dict:
+                payload["filter"] = filter_dict
+                
+            response = requests.post(query_url, headers=self.pinecone_headers, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                matches = result.get("matches", [])
+                logger.info(f"Manual query returned {len(matches)} matches")
+                return matches
+            else:
+                logger.error(f"Manual query failed with status {response.status_code}: {response.text}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Manual query error: {e}")
+            return []
+
     def add_documents(self, documents: List[Dict[str, Any]]) -> bool:
         """
         Add documents to the vector database.
@@ -76,7 +166,7 @@ class VectorDatabase:
         Returns:
             bool: Success status
         """
-        if not self.index or not self.embeddings:
+        if not self.pc or not self.embeddings:
             logger.warning("Vector database not available. Skipping document addition.")
             return False
         
@@ -106,10 +196,13 @@ class VectorDatabase:
                     }
                 })
             
-            # Upsert to Pinecone
-            self.index.upsert(vectors=vectors)
-            logger.info(f"Added {len(vectors)} documents to vector database")
-            return True
+            # Upsert to Pinecone - use manual mode if available
+            if self.pc == "manual":
+                return self._manual_upsert_vectors(vectors)
+            else:
+                self.index.upsert(vectors=vectors)
+                logger.info(f"Added {len(vectors)} documents to vector database")
+                return True
             
         except Exception as e:
             logger.error(f"Failed to add documents to vector database: {e}")
@@ -127,7 +220,7 @@ class VectorDatabase:
         Returns:
             List of similar documents with scores
         """
-        if not self.index or not self.embeddings:
+        if not self.pc or not self.embeddings:
             logger.warning("Vector database not available. Returning empty results.")
             return []
         
@@ -135,22 +228,37 @@ class VectorDatabase:
             # Generate query embedding
             query_embedding = self.embeddings.embed_query(query)
             
-            # Search Pinecone
-            search_response = self.index.query(
-                vector=query_embedding,
-                top_k=top_k,
-                include_metadata=True,
-                filter=filter_dict
-            )
+            # Search Pinecone - use manual mode if available
+            if self.pc == "manual":
+                matches = self._manual_query_vectors(query_embedding, top_k, filter_dict)
+                search_response = {"matches": matches}
+            else:
+                search_response = self.index.query(
+                    vector=query_embedding,
+                    top_k=top_k,
+                    include_metadata=True,
+                    filter=filter_dict
+                )
             
             # Format results
             results = []
-            for match in search_response.matches:
+            matches = search_response.get("matches", []) if isinstance(search_response, dict) else search_response.matches
+            for match in matches:
+                # Handle both manual mode (dict) and client mode (object) responses
+                if isinstance(match, dict):
+                    match_id = match.get('id', '')
+                    match_score = match.get('score', 0.0)
+                    match_metadata = match.get('metadata', {})
+                else:
+                    match_id = match.id
+                    match_score = match.score
+                    match_metadata = match.metadata
+                
                 results.append({
-                    'id': match.id,
-                    'score': match.score,
-                    'text': match.metadata.get('text', ''),
-                    'metadata': {k: v for k, v in match.metadata.items() if k != 'text'}
+                    'id': match_id,
+                    'score': match_score,
+                    'text': match_metadata.get('text', ''),
+                    'metadata': {k: v for k, v in match_metadata.items() if k != 'text'}
                 })
             
             return results

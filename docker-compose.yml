@@ -5,14 +5,23 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
-    env_file:
-      - ./.env
+    environment:
+      - POSTGRES_USER=clintra
+      - POSTGRES_PASSWORD=clintra123
+      - POSTGRES_DB=clintra
+      - DATABASE_URL=postgresql://clintra:clintra123@db:5432/clintra
+      - PINECONE_API_KEY=pcsk_2FEKzR_3knqadxwEgp3oAEVHDVt4s5RReB6bhNR83d5MtzSveZyMipbFff42WT4WGydcXF
+      - PINECONE_ENVIRONMENT=us-east-1
+      - PINECONE_PROJECT_ID=1f3d37e6-d027-4360-9bfc-41c611355463
+      - PINECONE_HOST=https://clintra-index-5ud1plb.svc.aped-4627-b74a.pinecone.io
+      - OPENAI_API_KEY=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
+      - CEREBRAS_API_KEY=csk-vy8h32fxkdp9djke4hjrxnn2crdn8kn4pm96pvv29pnkjjkc
+      - CEREBRAS_API_URL=https://api.cerebras.ai/v1/completions
+      - PUBMED_API_KEY=b91125af2060647c6efc327a9aa74dfa2908
+      - SECRET_KEY=f366332e-2e65-4dbd-8ec6-10f34968ab99b128fedd-bbc3-46b4-92d5-7702c457f66f
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
     depends_on:
       - db
-      - pubmed-connector
-      - pubchem-connector
-      - pdb-connector
-      - trials-connector
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -32,74 +41,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
-    env_file:
-      - ./.env
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=clintra
+      - POSTGRES_PASSWORD=clintra123
+      - POSTGRES_DB=clintra
     ports:
       - "5432:5432"
     dns:
       - 8.8.8.8
       - 1.1.1.1
 
-  # Microservice Connectors (Docker MCP Gateway)
-  pubmed-connector:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile.connector
-    command: python -m app.connectors.pubmed
-    ports:
-      - "8001:8001"
-    environment:
-      - CONNECTOR_TYPE=pubmed
-      - PORT=8001
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-
-  pubchem-connector:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile.connector
-    command: python -m app.connectors.pubchem
-    ports:
-      - "8002:8002"
-    environment:
-      - CONNECTOR_TYPE=pubchem
-      - PORT=8002
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-
-  pdb-connector:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile.connector
-    command: python -m app.connectors.pdb
-    ports:
-      - "8003:8003"
-    environment:
-      - CONNECTOR_TYPE=pdb
-      - PORT=8003
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-
-  trials-connector:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile.connector
-    command: python -m app.connectors.trials
-    ports:
-      - "8004:8004"
-    environment:
-      - CONNECTOR_TYPE=trials
-      - PORT=8004
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
 
 volumes:
   postgres_data:

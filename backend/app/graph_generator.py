@@ -3,6 +3,8 @@ import json
 import base64
 import io
 import tempfile
+import logging
+import time
 from typing import Dict, List, Any, Optional
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -12,6 +14,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.utils import PlotlyJSONEncoder
 import numpy as np
+from .logging_config import log_error, log_performance
+
+# Setup logger
+logger = logging.getLogger("clintra.graph")
 
 class GraphGenerator:
     def __init__(self):
@@ -20,8 +26,11 @@ class GraphGenerator:
     @staticmethod
     def generate_biomedical_graph(query: str, graph_type: str = "network") -> Dict[str, Any]:
         """
-        Generate a real biomedical graph based on the query with proper error handling.
+        Generate a real biomedical graph based on the query with bulletproof error handling and logging.
         """
+        start_time = time.time()
+        logger.info(f"Starting graph generation for query: {query}, type: {graph_type}")
+        
         try:
             # Create a network graph
             G = nx.Graph()
@@ -68,6 +77,18 @@ class GraphGenerator:
                 G.add_edge("receptor", "pathway", type="activates")
         
             # Generate different formats
+            # Generate download links with error handling
+            try:
+                download_links = GraphGenerator._generate_download_links(G, query)
+            except Exception as link_error:
+                logger.warning(f"Download links generation failed: {link_error}")
+                download_links = {
+                    "graph_json": "data:application/json;base64,e30=",
+                    "graph_png": "data:image/png;base64,",
+                    "graph_svg": "data:image/svg+xml;base64,",
+                    "interactive_viewer": "data:text/html;base64,"
+                }
+            
             graph_data = {
                 "query": query,
                 "graph_type": graph_type,
@@ -76,28 +97,47 @@ class GraphGenerator:
                           "size": G.nodes[node].get("size", 10)} for node in G.nodes()],
                 "edges": [{"source": edge[0], "target": edge[1], 
                           "type": G.edges[edge].get("type", "connects")} for edge in G.edges()],
-                "download_links": GraphGenerator._generate_download_links(G, query),
-                "sponsor_tech": "Powered by NetworkX, Matplotlib, and Plotly for real graph generation"
+                "download_links": download_links,
+                "sponsor_tech": "Powered by NetworkX, Matplotlib, and Plotly for real graph generation with bulletproof error handling"
             }
             
+            # Log successful generation
+            duration = time.time() - start_time
+            log_performance("graph_generation", duration, {
+                "query": query,
+                "graph_type": graph_type,
+                "nodes_count": len(G.nodes()),
+                "edges_count": len(G.edges())
+            })
+            
+            logger.info(f"Graph generation completed successfully in {duration:.2f}s")
             return graph_data
             
         except Exception as e:
-            print(f"Error generating graph: {e}")
-            # Return a minimal fallback graph
+            duration = time.time() - start_time
+            log_error(e, {
+                "query": query,
+                "graph_type": graph_type,
+                "duration": duration
+            })
+            
+            logger.error(f"Graph generation failed after {duration:.2f}s: {e}")
+            
+            # Return a minimal fallback graph with proper error information
             return {
                 "query": query,
                 "graph_type": graph_type,
                 "nodes": [{"id": "main", "label": query, "type": "main", "size": 20}],
                 "edges": [],
                 "download_links": {
-                    "graph_json": "data:application/json;base64,e30=",  # Empty JSON: {}
+                    "graph_json": "data:application/json;base64,e30=",
                     "graph_png": "data:image/png;base64,",
                     "graph_svg": "data:image/svg+xml;base64,",
                     "interactive_viewer": "data:text/html;base64,"
                 },
-                "sponsor_tech": "Graph generation encountered an error",
-                "error": str(e)
+                "sponsor_tech": "Graph generation encountered an error - fallback data provided",
+                "error": "Graph generation temporarily unavailable. Please try again.",
+                "error_details": str(e) if logger.isEnabledFor(logging.DEBUG) else None
             }
     
     @staticmethod
@@ -135,7 +175,7 @@ class GraphGenerator:
                 "interactive_viewer": f"data:text/html;base64,{html_b64}"
             }
         except Exception as e:
-            print(f"Error generating download links: {e}")
+            logger.error(f"Error generating download links: {e}")
             return {
                 "graph_json": "data:application/json;base64,e30=",
                 "graph_png": "data:image/png;base64,",
@@ -199,7 +239,7 @@ class GraphGenerator:
             
             return png_b64
         except Exception as e:
-            print(f"Error generating PNG: {e}")
+            logger.error(f"Error generating PNG: {e}")
             # Return empty base64 on error
             return ""
     
@@ -258,7 +298,7 @@ class GraphGenerator:
             
             return svg_b64
         except Exception as e:
-            print(f"Error generating SVG: {e}")
+            logger.error(f"Error generating SVG: {e}")
             return ""
     
     @staticmethod
@@ -349,7 +389,7 @@ class GraphGenerator:
             
             return html_b64
         except Exception as e:
-            print(f"Error generating interactive HTML: {e}")
+            logger.error(f"Error generating interactive HTML: {e}")
             return ""
 
 # Global instance

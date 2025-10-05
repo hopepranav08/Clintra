@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 from . import models, deps
 
 # Configuration
-SECRET_KEY = "clintra-secret-key-change-in-production"
+import os
+import secrets
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -47,8 +49,10 @@ def verify_token(token: str) -> Optional[dict]:
     """Verify and decode a JWT token."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"🔑 Token verified successfully for user: {payload.get('sub', 'unknown')}")
         return payload
-    except JWTError:
+    except JWTError as e:
+        print(f"❌ JWT verification failed: {e}")
         return None
 
 def get_current_user(
@@ -57,9 +61,12 @@ def get_current_user(
 ) -> models.User:
     """Get the current authenticated user."""
     token = credentials.credentials
+    print(f"🔍 Verifying token: {token[:20]}...")
+    
     payload = verify_token(token)
     
     if payload is None:
+        print("❌ Token verification failed - payload is None")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -68,25 +75,40 @@ def get_current_user(
     
     username: str = payload.get("sub")
     if username is None:
+        print("❌ No username in token payload")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    print(f"🔍 Looking for user: {username}")
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
+        print(f"❌ User not found in database: {username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    print(f"✅ User authenticated successfully: {username}")
     return user
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[models.User]:
-    """Authenticate a user with username and password."""
+    """Authenticate a user with username, email, or password."""
+    # Try to find user by username first
     user = db.query(models.User).filter(models.User.username == username).first()
+    
+    # If not found by username, try by email
+    if not user:
+        user = db.query(models.User).filter(models.User.email == username).first()
+    
+    # If still not found, try extracting username from email
+    if not user and '@' in username:
+        username_from_email = username.split('@')[0]
+        user = db.query(models.User).filter(models.User.username == username_from_email).first()
+    
     if not user:
         return None
     if not verify_password(password, user.hashed_password):

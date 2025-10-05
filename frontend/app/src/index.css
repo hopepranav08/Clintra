@@ -1,8 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  /* 🎨 CLINTRA ULTRA-DARK THEME - DRAMATIC & SMOOTH */
+  
+  /* Ultra Deep Navy Background - Even more dramatic */
+  --clintra-navy: #0A0E13;
+  --clintra-navy-light: #141A20;
+  --clintra-navy-lighter: #1E252C;
+  --clintra-navy-dark: #050709;
+  --clintra-navy-darker: #020304;
+  
+  /* Enhanced Vibrant Teal Accents - Smoother gradients */
+  --clintra-teal: #00E6FF;
+  --clintra-teal-bright: #33F0FF;
+  --clintra-teal-dark: #00B8CC;
+  --clintra-teal-darker: #0099AA;
+  --clintra-teal-glow: rgba(0, 230, 255, 0.4);
+  
+  /* Electric Cyan - Enhanced brightness */
+  --clintra-cyan: #00FFFF;
+  --clintra-cyan-bright: #66FFFF;
+  --clintra-cyan-dark: #00CCCC;
+  --clintra-cyan-darker: #009999;
+  
+  /* Deep Purple - Premium feel */
+  --clintra-purple: #6366F1;
+  --clintra-purple-dark: #4F46E5;
+  --clintra-purple-light: #818CF8;
+  
+  /* Hot Pink - Attention grabber */
+  --clintra-pink: #FF006E;
+  --clintra-pink-light: #FF1B87;
+  
+  /* Rich Gold - Premium accent */
+  --clintra-gold: #FFD700;
+  --clintra-gold-dark: #FFA500;
+  
+  /* 🎨 MODE-SPECIFIC COLORS - COMPLEMENTARY TO NAVY + CYAN THEME */
+  /* Using color science: Analogous colors to cyan (#00D9FF) */
+  
+  /* Literature Mode - Cyan-Teal (Cooler cyan, research-focused) */
+  --mode-literature-from: #00D9FF;
+  --mode-literature-via: #00B8D4;
+  --mode-literature-to: #0097A7;
+  --mode-literature-glow: rgba(0, 217, 255, 0.3);
+  --mode-literature-text: #4DD0E1;
+  --mode-literature-bg: rgba(0, 217, 255, 0.1);
+  
+  /* Hypothesis Mode - Purple-Blue (Creative, analytical) */
+  --mode-hypothesis-from: #7B68EE;
+  --mode-hypothesis-via: #6366F1;
+  --mode-hypothesis-to: #4F46E5;
+  --mode-hypothesis-glow: rgba(123, 104, 238, 0.3);
+  --mode-hypothesis-text: #A5B4FC;
+  --mode-hypothesis-bg: rgba(123, 104, 238, 0.1);
+  
+  /* Download Mode - Gold-Cyan (Premium, valuable data) */
+  --mode-download-from: #FFD700;
+  --mode-download-via: #FFA500;
+  --mode-download-to: #FF8C00;
+  --mode-download-glow: rgba(255, 215, 0, 0.3);
+  --mode-download-text: #FFE082;
+  --mode-download-bg: rgba(255, 215, 0, 0.1);
+  
+  /* Glass morphism effects */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+}
 
 body {
   margin: 0;
@@ -13,24 +82,61 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-weight: 400;
   line-height: 1.6;
+  background: var(--clintra-navy);
+  color: #FFFFFF;
 }
 
-/* Custom scrollbar for dark theme */
+/* 🎨 GLASS MORPHISM UTILITY CLASSES */
+.glass-morphism {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+}
+
+.glass-morphism-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* 🎨 GLOW EFFECTS - REDUCED FOR EYE COMFORT */
+.glow-teal {
+  box-shadow: 0 0 8px var(--clintra-teal-glow);
+}
+
+.glow-literature {
+  box-shadow: 0 0 6px var(--mode-literature-glow);
+}
+
+.glow-hypothesis {
+  box-shadow: 0 0 6px var(--mode-hypothesis-glow);
+}
+
+.glow-download {
+  box-shadow: 0 0 6px var(--mode-download-glow);
+}
+
+/* 🎨 Clintra Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: var(--clintra-navy-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 3px;
+  background: var(--clintra-teal);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--clintra-teal-light);
 }
 
 /* Message content styling */
@@ -82,6 +188,66 @@ body {
   font-size: 15px;
   color: #ffffff;
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+/* Enhanced heading styles */
+.message-content h2 {
+  color: #93c5fd;
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 0.5rem;
+}
+
+.message-content h3 {
+  color: #bfdbfe;
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Enhanced list styles */
+.message-content ul {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.message-content li {
+  margin-bottom: 0.5rem;
+  color: #e5e7eb;
+  line-height: 1.6;
+}
+
+/* Enhanced code styles */
+.message-content code {
+  background-color: #374151;
+  color: #10b981;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  border: 1px solid #4b5563;
+}
+
+/* Enhanced paragraph styles */
+.message-content p {
+  color: #e5e7eb;
+  line-height: 1.7;
+  margin: 0.75rem 0;
+}
+
+/* Enhanced link styles */
+.message-content a {
+  color: #60a5fa;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.message-content a:hover {
+  color: #93c5fd;
 }
 
 /* TL;DR text styling */
@@ -138,12 +304,205 @@ body {
   position: relative;
 }
 
+/* Light theme styles */
+.light-theme {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --accent-color: #3b82f6;
+}
+
+.light-theme .min-h-screen {
+  background-color: var(--bg-primary);
+}
+
+.light-theme .bg-gray-900 {
+  background-color: var(--bg-primary);
+}
+
+.light-theme .bg-gray-800 {
+  background-color: var(--bg-secondary);
+}
+
+.light-theme .bg-gray-700 {
+  background-color: var(--bg-tertiary);
+}
+
+.light-theme .text-white {
+  color: var(--text-primary);
+}
+
+.light-theme .text-gray-300 {
+  color: var(--text-secondary);
+}
+
+.light-theme .text-gray-400 {
+  color: var(--text-muted);
+}
+
+.light-theme .border-gray-700 {
+  border-color: var(--border-color);
+}
+
+.light-theme .message-content {
+  color: var(--text-primary);
+}
+
+.light-theme .message-content h2 {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.light-theme .message-content h3 {
+  color: var(--text-secondary);
+}
+
+.light-theme .message-content p {
+  color: var(--text-primary);
+}
+
+.light-theme .message-content li {
+  color: var(--text-primary);
+}
+
+.light-theme .message-content code {
+  background-color: var(--bg-tertiary);
+  color: #059669;
+  border-color: var(--border-color);
+}
+
+.light-theme .message-content a {
+  color: var(--accent-color);
+}
+
+.light-theme .message-content a:hover {
+  color: #2563eb;
+}
+
 /* Auto-detect and style URLs */
 .message-content:has-text("http") {
   /* This will be handled by JavaScript for better control */
 }
 
-/* Loading animations */
+/* 🎨 CLINTRA ENHANCED ANIMATIONS */
+
+/* Ultra-smooth fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Staggered fade-in for multiple elements */
+.fade-in-stagger {
+  animation: fadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.fade-in-stagger:nth-child(1) { animation-delay: 0.1s; }
+.fade-in-stagger:nth-child(2) { animation-delay: 0.2s; }
+.fade-in-stagger:nth-child(3) { animation-delay: 0.3s; }
+.fade-in-stagger:nth-child(4) { animation-delay: 0.4s; }
+.fade-in-stagger:nth-child(5) { animation-delay: 0.5s; }
+
+/* Slide in from right - Ultra Enhanced */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px) scale(0.9) rotateY(10deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1) rotateY(0deg);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Slide in from left - Ultra Enhanced */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.9) rotateY(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1) rotateY(0deg);
+  }
+}
+
+.slide-in-left {
+  animation: slideInLeft 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Scale in with rotation - New */
+@keyframes scaleInRotate {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.scale-in-rotate {
+  animation: scaleInRotate 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Bounce in - Enhanced */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-50px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bounce-in {
+  animation: bounceIn 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Floating effect */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse animation */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -211,20 +570,33 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* Enhanced message animations */
+@keyframes messageGlow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(0, 217, 255, 0.3);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  50% { 
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.6), 0 0 30px rgba(0, 217, 255, 0.3);
   }
 }
 
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
+@keyframes textShimmer {
+  0% { 
+    background-position: -200% 0; 
+  }
+  100% { 
+    background-position: 200% 0; 
+  }
+}
+
+.message-glow {
+  animation: messageGlow 3s ease-in-out infinite;
+}
+
+.text-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200% 100%;
+  animation: textShimmer 2s ease-in-out infinite;
 }
 
 /* Mobile optimizations */
@@ -299,4 +671,38 @@ body {
   .tldr-section {
     border-width: 6px;
   }
+}
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--clintra-teal) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--clintra-teal);
+  border-radius: 4px;
+  opacity: 0.3;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--clintra-cyan);
+  opacity: 0.6;
+}
+
+.scrollbar-thumb-clintra-teal\/30::-webkit-scrollbar-thumb {
+  background: rgba(0, 217, 255, 0.3);
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
 }

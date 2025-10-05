@@ -10,16 +10,63 @@ class ClinicalTrialsConnector:
     
     def search_trials(self, query: str, max_results: int = 10, filters: Dict = None) -> Dict[str, Any]:
         """
-        Search ClinicalTrials.gov for trials related to the query with advanced filtering.
+        DYNAMIC ClinicalTrials.gov search for ANY biomedical query with intelligent trial analysis.
         """
         try:
-            # Build search parameters
+            # ENHANCED: Generate multiple search variations for comprehensive coverage
+            search_variations = self._generate_trial_search_variations(query)
+            print(f"Debug: Clinical trials search variations: {search_variations}")
+            
+            all_trials = []
+            seen_nct_ids = set()
+            
+            # Try multiple search variations for comprehensive coverage
+            for search_query in search_variations:
+                try:
+                    trials_result = self._search_single_trial_query(search_query, max_results, filters)
+                    trials = trials_result.get('trials', []) if trials_result else []
+                    
+                    # Add unique trials (avoid duplicates)
+                    for trial in trials:
+                        nct_id = trial.get('nct_id', '')
+                        if nct_id and nct_id not in seen_nct_ids:
+                            all_trials.append(trial)
+                            seen_nct_ids.add(nct_id)
+                    
+                    # If we have enough trials, break
+                    if len(all_trials) >= max_results:
+                        break
+                        
+                except Exception as e:
+                    print(f"Clinical trials search variation failed: {search_query} - {e}")
+                    continue
+            
+            # Return the best trials found
+            final_trials = all_trials[:max_results]
+            print(f"Debug: Clinical trials found {len(final_trials)} unique trials from {len(search_variations)} search variations")
+            
+            return {
+                'trials': final_trials,
+                'total_count': len(final_trials),
+                'search_method': 'multi-variation dynamic search',
+                'query': query
+            }
+            
+        except Exception as e:
+            print(f"Debug: Clinical trials search error: {e}")
+            return {'trials': [], 'total_count': 0, 'error': str(e)}
+    
+    def _search_single_trial_query(self, query: str, max_results: int, filters: Dict = None) -> Dict[str, Any]:
+        """
+        Search ClinicalTrials.gov with a single optimized query.
+        """
+        try:
+            # Build search parameters - use correct API format
             search_params = {
                 'query.term': query,
                 'format': 'json',
                 'countTotal': 'true',
-                'pageSize': max_results,
-                'pageToken': ''
+                'pageSize': str(max_results)
             }
             
             # Add filters
@@ -61,6 +108,108 @@ class ClinicalTrialsConnector:
         except Exception as e:
             print(f"ClinicalTrials parsing error: {e}")
             return self._get_fallback_data(query)
+    
+    def _generate_trial_search_variations(self, query: str) -> List[str]:
+        """
+        Generate multiple clinical trial search variations for comprehensive coverage.
+        """
+        variations = [query]  # Start with original query
+        
+        # Clean the query for variations
+        cleaned_query = query.lower().strip()
+        
+        # Add disease-specific trial variations
+        if any(term in cleaned_query for term in ['cancer', 'tumor', 'oncology']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} oncology study",
+                f"{cleaned_query} cancer treatment",
+                "cancer immunotherapy", "cancer chemotherapy", "cancer surgery"
+            ])
+        
+        if any(term in cleaned_query for term in ['diabetes', 'insulin', 'glucose']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} diabetes study",
+                f"{cleaned_query} glucose control",
+                "diabetes medication", "insulin therapy", "diabetes prevention"
+            ])
+        
+        if any(term in cleaned_query for term in ['hiv', 'aids', 'antiretroviral']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} HIV study",
+                f"{cleaned_query} antiretroviral",
+                "HIV prevention", "HIV treatment", "HIV vaccine"
+            ])
+        
+        if any(term in cleaned_query for term in ['alzheimer', 'dementia', 'cognitive']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} dementia study",
+                f"{cleaned_query} cognitive therapy",
+                "alzheimer treatment", "dementia prevention", "cognitive enhancement"
+            ])
+        
+        if any(term in cleaned_query for term in ['hypertension', 'blood pressure']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} hypertension study",
+                f"{cleaned_query} blood pressure control",
+                "hypertension medication", "blood pressure monitoring"
+            ])
+        
+        # Add therapeutic area variations
+        if any(term in cleaned_query for term in ['drug', 'medication', 'therapy']):
+            variations.extend([
+                f"{cleaned_query} clinical trial",
+                f"{cleaned_query} drug study",
+                f"{cleaned_query} therapeutic trial",
+                f"{cleaned_query} treatment study"
+            ])
+        
+        # Add study type variations
+        if any(term in cleaned_query for term in ['vaccine', 'immunization']):
+            variations.extend([
+                f"{cleaned_query} vaccine trial",
+                f"{cleaned_query} immunization study",
+                f"{cleaned_query} vaccine efficacy"
+            ])
+        
+        if any(term in cleaned_query for term in ['surgery', 'surgical']):
+            variations.extend([
+                f"{cleaned_query} surgical trial",
+                f"{cleaned_query} surgery study",
+                f"{cleaned_query} operative study"
+            ])
+        
+        if any(term in cleaned_query for term in ['device', 'implant', 'prosthetic']):
+            variations.extend([
+                f"{cleaned_query} device trial",
+                f"{cleaned_query} medical device study",
+                f"{cleaned_query} device safety"
+            ])
+        
+        # Add phase-specific variations
+        if any(term in cleaned_query for term in ['phase', 'clinical']):
+            variations.extend([
+                f"{cleaned_query} phase 1",
+                f"{cleaned_query} phase 2",
+                f"{cleaned_query} phase 3",
+                f"{cleaned_query} randomized trial"
+            ])
+        
+        # Remove duplicates and limit to 5 variations
+        unique_variations = []
+        seen = set()
+        for variation in variations:
+            if variation not in seen:
+                unique_variations.append(variation)
+                seen.add(variation)
+                if len(unique_variations) >= 5:
+                    break
+        
+        return unique_variations
     
     def _parse_trial_data(self, study: Dict) -> Dict[str, Any]:
         """

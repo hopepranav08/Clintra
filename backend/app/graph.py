@@ -20,7 +20,7 @@ async def call_cerebras_for_hypothesis(prompt: str) -> str:
     }
     
     payload = {
-        "model": "llama-2-7b-chat",
+        "model": "llama3.1-8b",
         "prompt": prompt,
         "max_tokens": 300,
         "temperature": 0.8,
@@ -60,25 +60,54 @@ async def generate_hypothesis_from_graph(input_data: dict) -> str:
         compound_summary += f"(Formula: {compound_data.get('molecular_formula', 'Unknown')}, "
         compound_summary += f"Weight: {compound_data.get('molecular_weight', 'Unknown')})\n\n"
 
-    # Create comprehensive prompt for Cerebras
-    prompt = f"""You are an AI research assistant specializing in biomedical hypothesis generation. Based on the following information, generate a scientifically plausible hypothesis.
+    # Create comprehensive prompt for Cerebras with enhanced formatting
+    prompt = f"""You are Clintra, an AI research assistant specializing in biomedical hypothesis generation. Based on the following information, generate a scientifically plausible hypothesis.
 
+**Research Context:**
 {context_summary}{compound_summary}
 
-Research Query: {text}
+**Research Query:** {text}
 
-Please generate a specific, testable hypothesis that:
-1. Is based on the provided literature context
-2. Incorporates relevant molecular mechanisms
-3. Suggests potential therapeutic targets or interventions
-4. Is scientifically sound and testable
-5. Includes specific proteins, pathways, or compounds when relevant
+**Instructions:**
+Please generate a specific, testable hypothesis with the following structure and formatting:
 
-Format your response as a clear, concise hypothesis statement followed by a brief rationale.
+## Main Hypothesis
+- **Bold** the primary hypothesis statement
+- Use clear, scientific language
+- Include specific predictions
 
-CRITICAL: You MUST end your response with a "TL;DR" section that provides a concise 2-3 sentence summary of the hypothesis and its key implications.
+## Scientific Rationale
+- Use bullet points (•) for supporting evidence
+- **Bold** key molecular mechanisms
+- Include relevant pathways and targets
 
-Hypothesis:"""
+## Proposed Experimental Approach
+- Use numbered lists (1., 2., 3.) for experimental steps
+- **Bold** key techniques and methods
+- Include controls and validation approaches
+
+## Expected Outcomes
+- Use bullet points for predicted results
+- **Bold** therapeutic implications
+- Include potential clinical applications
+
+## Potential Challenges
+- Use bullet points for limitations
+- **Bold** important considerations
+- Include mitigation strategies
+
+**Formatting Requirements:**
+- Use ## for main headings
+- Use ### for subheadings
+- Use **bold** for important terms, hypotheses, and concepts
+- Use bullet points (•) for lists
+- Use numbered lists (1., 2., 3.) for sequences
+- Include proper spacing between sections
+- Make the response visually appealing and professional
+
+CRITICAL: You MUST end your response with a "**TL;DR:**" section (in bold) that provides a concise 2-3 sentence summary of the hypothesis and its key implications.
+
+**Hypothesis:**"""
 
     # Call Cerebras API for hypothesis generation
     hypothesis = await call_cerebras_for_hypothesis(prompt)

@@ -8,28 +8,71 @@ class PubMedConnector:
     def __init__(self):
         self.base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         self.api_key = os.getenv('PUBMED_API_KEY')  # Set in environment variables
-        self.rate_limit_delay = 0.34  # 3 requests per second max
+        self.rate_limit_delay = 0.15  # Optimized for hackathon speed
     
     def search_articles(self, query: str, max_results: int = 10, filters: Dict = None) -> List[Dict[str, Any]]:
         """
-        Search PubMed for articles related to the query with advanced filtering.
+        DYNAMIC PubMed search for ANY biomedical query with intelligent query optimization.
         """
         try:
-            # Step 1: Search for article IDs
-            search_url = f"{self.base_url}/esearch.fcgi"
-            search_params = {
-                'db': 'pubmed',
-                'term': self._build_search_term(query, filters),
-                'retmax': max_results,
-                'retmode': 'json',
-                'sort': filters.get('sort', 'relevance') if filters else 'relevance',
-                'mindate': filters.get('start_date', '2020/01/01') if filters else '2020/01/01',
-                'maxdate': filters.get('end_date', '2024/12/31') if filters else '2024/12/31'
-            }
+            # ENHANCED: Dynamic query optimization for maximum coverage
+            optimized_queries = self._generate_search_variations(query)
+            print(f"Debug: PubMed search variations: {optimized_queries}")
             
-            if self.api_key:
-                search_params['api_key'] = self.api_key
+            all_articles = []
+            seen_pmids = set()
             
+            # Try multiple query variations for comprehensive coverage
+            for search_query in optimized_queries:
+                try:
+                    articles = self._search_single_query(search_query, max_results, filters)
+                    
+                    # Add unique articles (avoid duplicates)
+                    for article in articles:
+                        pmid = article.get('pmid', '')
+                        if pmid and pmid not in seen_pmids:
+                            all_articles.append(article)
+                            seen_pmids.add(pmid)
+                    
+                    # If we have enough articles, break
+                    if len(all_articles) >= max_results:
+                        break
+                        
+                except Exception as e:
+                    print(f"PubMed search variation failed: {search_query} - {e}")
+                    continue
+            
+            # Return the best articles found
+            final_articles = all_articles[:max_results]
+            print(f"Debug: PubMed found {len(final_articles)} unique articles from {len(optimized_queries)} search variations")
+            return final_articles
+            
+        except Exception as e:
+            print(f"Debug: PubMed search error: {e}")
+            return []
+    
+    def _search_single_query(self, query: str, max_results: int, filters: Dict = None) -> List[Dict[str, Any]]:
+        """
+        Search PubMed with a single optimized query.
+        """
+        # Step 1: Search for article IDs with enhanced parameters
+        search_url = f"{self.base_url}/esearch.fcgi"
+        search_params = {
+            'db': 'pubmed',
+            'term': self._build_search_term(query, filters),
+            'retmax': min(max_results, 50),  # PubMed allows up to 50 per request
+            'retmode': 'json',
+            'sort': filters.get('sort', 'relevance') if filters else 'relevance',
+            'mindate': filters.get('start_date', '2020/01/01') if filters else '2020/01/01',
+            'maxdate': filters.get('end_date', '2024/12/31') if filters else '2024/12/31',
+            'field': 'TIAB',  # Search in Title and Abstract for better results
+            'type': 'research'  # Focus on research articles
+        }
+        
+        if self.api_key:
+            search_params['api_key'] = self.api_key
+        
+        try:
             time.sleep(self.rate_limit_delay)  # Rate limiting
             search_response = requests.get(search_url, params=search_params, timeout=10)
             search_response.raise_for_status()
@@ -88,6 +131,76 @@ class PubMedConnector:
                     search_term += f" AND {term}[MeSH Terms]"
         
         return search_term
+    
+    def _generate_search_variations(self, query: str) -> List[str]:
+        """
+        Generate multiple search query variations for comprehensive coverage.
+        """
+        variations = [query]  # Start with original query
+        
+        # Clean the query for variations
+        cleaned_query = query.lower().strip()
+        
+        # Add disease-specific variations
+        if any(term in cleaned_query for term in ['cancer', 'tumor', 'carcinoma']):
+            variations.extend([
+                f"{cleaned_query} oncology",
+                f"{cleaned_query} chemotherapy",
+                f"{cleaned_query} immunotherapy"
+            ])
+        
+        if any(term in cleaned_query for term in ['diabetes', 'insulin', 'glucose']):
+            variations.extend([
+                f"{cleaned_query} mellitus",
+                f"{cleaned_query} hyperglycemia",
+                f"{cleaned_query} antidiabetic"
+            ])
+        
+        if any(term in cleaned_query for term in ['hiv', 'aids', 'retrovirus']):
+            variations.extend([
+                f"{cleaned_query} antiretroviral",
+                f"{cleaned_query} immunodeficiency",
+                f"{cleaned_query} viral"
+            ])
+        
+        if any(term in cleaned_query for term in ['alzheimer', 'dementia', 'cognitive']):
+            variations.extend([
+                f"{cleaned_query} neurodegenerative",
+                f"{cleaned_query} amyloid",
+                f"{cleaned_query} tau"
+            ])
+        
+        # Add protein-related variations
+        if any(term in cleaned_query for term in ['protein', 'enzyme', 'receptor']):
+            variations.extend([
+                f"{cleaned_query} structure",
+                f"{cleaned_query} binding",
+                f"{cleaned_query} function"
+            ])
+        
+        # Add drug-related variations
+        if any(term in cleaned_query for term in ['drug', 'compound', 'medication']):
+            variations.extend([
+                f"{cleaned_query} mechanism",
+                f"{cleaned_query} pharmacokinetics",
+                f"{cleaned_query} efficacy"
+            ])
+        
+        # Add general biomedical terms if not present
+        if not any(term in cleaned_query for term in ['therapy', 'treatment', 'clinical']):
+            variations.append(f"{cleaned_query} therapy")
+        
+        # Remove duplicates and limit to 5 variations
+        unique_variations = []
+        seen = set()
+        for variation in variations:
+            if variation not in seen:
+                unique_variations.append(variation)
+                seen.add(variation)
+                if len(unique_variations) >= 5:
+                    break
+        
+        return unique_variations
     
     def _parse_pubmed_xml(self, xml_content: str) -> List[Dict[str, Any]]:
         """
