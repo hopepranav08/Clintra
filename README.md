@@ -15,7 +15,7 @@
 
 ---
 
-## 🏆 **Three Revolutionary Sponsor Technologies**
+## 🏆 **Sponsor Technologies Used**
 
 ### 1. 🧠 **Cerebras AI - Llama 3.1-8B**
 - **High-Performance Inference**: Powers real-time hypothesis generation and research analysis
@@ -37,7 +37,7 @@
 
 ---
 
-## 🚀 **Revolutionary Features**
+## 🚀 **Revolutionary Core Features**
 
 ### **🧬 Smart Literature Analysis**
 - **Real-Time PubMed Integration**: Access 34+ million biomedical articles
@@ -56,6 +56,11 @@
 - **Protein Data Bank**: 200,000+ protein structures
 - **3D Visualization**: Interactive molecular structure exploration
 - **Multi-Format Export**: JSON, SDF, PDB, CIF formats for research tools
+
+### **📊 3D Viewer**
+- **PubChem Database**: 111+ million chemical compounds
+- **Protein Data Bank**: 200,000+ protein structures
+- **Visualization**: Interactive molecular structure exploration 
 
 ### **🤝 Collaborative Research Platform**
 - **Team Workspaces**: Share research sessions with global collaborators
@@ -141,7 +146,7 @@ docker compose up --build -d
 - `"Antibiotic resistance mechanisms"`
 
 ### **Expected Results:**
-- **📚 Literature**: 10-20 recent research papers with full citations
+- **📚 Literature**: 10-20 recent research papers with full citations,Links and Trials
 - **💡 Hypotheses**: AI-generated research directions with confidence scores
 - **🧬 Data**: Molecular structures, clinical trial information, compound properties
 - **🔗 Links**: Direct access to PubMed, ClinicalTrials.gov, PubChem, PDB
@@ -210,72 +215,21 @@ clintra/
 - `POST /api/workspaces` - Create collaborative workspace
 - `POST /api/workspaces/{id}/invite` - Invite researchers
 
----
 
-## ⚙️ **Configuration**
-
-### **Environment Variables**
-```env
-# Database
-POSTGRES_USER=clintra
-POSTGRES_PASSWORD=clintra123
-POSTGRES_DB=clintra
-
-# AI Services (Sponsor Technologies)
-CEREBRAS_API_KEY=your_cerebras_key
-CEREBRAS_API_URL=your_cerebras_url
-PINECONE_API_KEY=your_pinecone_key
-
-# Security
-SECRET_KEY=your_secret_key
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
-
----
-
-## 🧪 **Testing & Validation**
-
-### **Automated Testing**
-```bash
-# Backend API Tests
-cd backend && pytest tests/
-
-# Frontend Component Tests
-cd frontend/app && npm test
-
-# Integration Tests
-docker compose -f docker-compose.test.yml up --build
-```
-
-### **Research Validation Checklist**
-- [ ] ✅ PubMed integration returns real research papers
-- [ ] ✅ Clinical trials data includes active studies
-- [ ] ✅ PubChem provides accurate molecular structures
-- [ ] ✅ PDB delivers protein structure data
-- [ ] ✅ Cerebras AI generates plausible hypotheses
-- [ ] ✅ Pinecone enables semantic literature search
-- [ ] ✅ Team collaboration works across users
-- [ ] ✅ Chat history persists research conversations
-
----
-
-## 🏆 **Hackathon Achievements**
-
-### **✅ Complete Implementation**
+### **Implementation**
 - **🔬 Full Research Pipeline**: Literature → Hypothesis → Data → Visualization
 - **🤖 AI Integration**: Cerebras Llama 3.1-8B + Pinecone + Docker MCP
 - **🌐 Production Ready**: Docker containers, PostgreSQL, JWT auth
 - **👥 Team Features**: Workspaces, chat history, real-time collaboration
-- **📱 Modern UI**: ChatGPT-like interface with dark theme
+- **📱 Modern UI**: Modern yet simple interface with a nice theme
 
 ### **🚀 Performance Metrics**
-- **⚡ Response Time**: < 3 seconds for literature search
+- **⚡ Response Time**: < 30-40 seconds for literature search
 - **🧠 AI Accuracy**: 95%+ relevant hypothesis generation
 - **📊 Data Coverage**: 34M+ PubMed articles, 111M+ PubChem compounds
 - **🔄 Reliability**: 99.9% uptime with error handling
 - **👥 Scalability**: Supports 1000+ concurrent researchers
 
----
 
 ## 🌟 **Impact & Future Vision**
 
@@ -292,68 +246,25 @@ docker compose -f docker-compose.test.yml up --build
 - **🏥 Clinical Integration**: Direct connection to hospital systems
 - **🔬 Lab Automation**: Integration with robotic research systems
 
----
-
-## 🤝 **Contributing**
-
-### **For Researchers**
-- 🐛 **Report Issues**: Found a bug? Create an issue
-- 💡 **Feature Requests**: Suggest new research capabilities
-- 📚 **Documentation**: Help improve research guides
-- 🧪 **Testing**: Validate with your research domain
-
-### **For Developers**
-- 🍴 **Fork & Contribute**: Submit pull requests
-- 🧪 **Add Tests**: Ensure code quality
-- 📖 **Code Standards**: Follow PEP 8 (Python) and ESLint (JavaScript)
-- 🔄 **Git Workflow**: Use conventional commits
-
----
 
 ## 📄 **License**
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
----
 
-## 🆘 **Support & Community**
-
-### **Getting Help**
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/your-repo/issues)
-- **💬 Community**: [Discord/Slack](https://discord.gg/clintra)
-- **📧 Email**: support@clintra.com
-- **📚 Documentation**: [Wiki](https://github.com/your-repo/wiki)
-
-### **Troubleshooting**
-```bash
-# Check service status
-docker compose ps
-
-# View logs
-docker compose logs -f
-
-# Test API health
-curl http://localhost:8000/api/health
-
-# Reset database
-docker compose down -v && docker compose up --build
-```
-
----
-
-## 🏆 **Award-Winning Potential**
+## **Potential**
 
 **Clintra represents the future of biomedical research** - combining cutting-edge AI, scalable infrastructure, and intuitive design to solve one of humanity's greatest challenges: accelerating the discovery of life-saving treatments.
 
 **Built with:**
 - 🧠 **Cerebras AI** - Revolutionary inference performance
+- 🧠 **Meta Llama** - LLM performance
 - 🐳 **Docker MCP** - Enterprise-grade microservices
 - 🔍 **Pinecone** - Next-generation vector intelligence
 
 **Ready for:**
-- 🏆 **Hackathon Victory** - Complete, working, production-ready
 - 🌍 **Global Impact** - Democratizing drug discovery worldwide
-- 🚀 **Startup Launch** - Scalable, secure, and investor-ready
+- 🚀 **Launch** - Scalable, secure, and investor-ready
 
 ---
 
