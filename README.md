@@ -266,6 +266,22 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 🌍 **Global Impact** - Democratizing drug discovery worldwide
 - 🚀 **Launch** - Scalable, secure, and investor-ready
 
+## 👨‍💻 Contributors
+- **Pranav Swami** – Lead, Ai,backend department
+- [GitHub](https://github.com/hopepranav08) | [LinkedIn](www.linkedin.com/in/pranav-santosh-swami-8b82861b9)
+- **Neha Sharma** – API department
+- [GitHub](https://github.com/NehaSama4833) | [LinkedIn](https://www.linkedin.com/in/neha-sharma-b08737316)
+- **Vedant Sankpal** – AI department
+- [GitHub](https://github.com/Vedant2004X) | [LinkedIn](www.linkedin.com/in/vedant-sankpal-3a0aaa19b)
+- **Swadha Lonkar** – Design department
+
+
+## 📫 Contact
+Have questions or collaboration ideas?  
+📧 pranavswami077@email.com  
+🌐 [Clintra GitHub Repo](https://github.com/hopepranav08/Clintra)
+
+
 ---
 
 <div align="center">
