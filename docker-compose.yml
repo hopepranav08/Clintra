@@ -1,0 +1,56 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+    environment:
+      - POSTGRES_USER=clintra
+      - POSTGRES_PASSWORD=clintra123
+      - POSTGRES_DB=clintra
+      - DATABASE_URL=postgresql://clintra:clintra123@db:5432/clintra
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_PROJECT_ID=${PINECONE_PROJECT_ID}
+      - PINECONE_HOST=${PINECONE_HOST}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - CEREBRAS_API_URL=${CEREBRAS_API_URL}
+      - PUBMED_API_KEY=${PUBMED_API_KEY}
+      - SECRET_KEY=f366332e-2e65-4dbd-8ec6-10f34968ab99b128fedd-bbc3-46b4-92d5-7702c457f66f
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      - db
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER=clintra
+      - POSTGRES_PASSWORD=clintra123
+      - POSTGRES_DB=clintra
+    ports:
+      - "5432:5432"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+
+volumes:
+  postgres_data:
